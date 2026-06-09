@@ -1,0 +1,11 @@
+# Connector — Google Drive μέσω gws CLI (εγκατεστημένο στο stack του χρήστη)
+# Σημείωση: τα command templates είναι editable — προσαρμόζονται στην έκδοση του gws.
+name: google-drive
+display_name: "Google Drive"
+description: "Αρχεία και αναζήτηση στο Drive μέσω gws CLI"
+binary: gws
+auth: oauth
+actions:
+  list_files: "gws drive files list"
+  search: "gws drive files search {args}"
+events: [file_created, file_modified, file_shared]

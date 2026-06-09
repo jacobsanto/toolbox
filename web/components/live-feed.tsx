@@ -22,6 +22,8 @@ const EVENT_TYPES = [
   "run.finished",
   "run.error",
   "run.cancelled",
+  "inbox.captured",
+  "inbox.triaged",
 ];
 
 const TYPE_TO_STATUS: Record<string, string> = {
@@ -41,6 +43,8 @@ function describe(type: string, payload: Record<string, unknown>): string {
     return `${payload.agent_id ?? ""} · exit ${payload.exit_code} · ${payload.duration_ms} ms`;
   }
   if (type === "run.error") return String(payload.error ?? "");
+  if (type === "inbox.captured") return `📥 ${String(payload.content ?? "").slice(0, 60)}`;
+  if (type === "inbox.triaged") return `🏷️ ${payload.kind}: ${String(payload.content ?? "").slice(0, 50)}`;
   return `${payload.agent_id ?? ""} · ${String(payload.task ?? "").slice(0, 60)}`;
 }
 

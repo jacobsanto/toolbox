@@ -22,9 +22,13 @@ app = typer.Typer(name=APP_NAME, no_args_is_help=True, help="Mission Control —
 agents_app = typer.Typer(help="Διαχείριση πρακτόρων")
 runs_app = typer.Typer(help="Ιστορικό εκτελέσεων")
 memory_app = typer.Typer(help="Μνήμη (Obsidian vault)")
+inbox_app = typer.Typer(help="Inbox — universal capture & triage")
+connectors_app = typer.Typer(help="Integrations Hub (connectors)")
 app.add_typer(agents_app, name="agents")
 app.add_typer(runs_app, name="runs")
 app.add_typer(memory_app, name="memory")
+app.add_typer(inbox_app, name="inbox")
+app.add_typer(connectors_app, name="connectors")
 
 console = Console()
 
@@ -206,6 +210,118 @@ def memory_moc():
 
     path = generate_moc()
     console.print(f"🗺️  Το MOC γράφτηκε: [cyan]{path}[/]")
+
+
+@inbox_app.command("add")
+def inbox_add(content: str = typer.Argument(..., help="Σκέψη, link, σημείωση"),
+              triage_now: bool = typer.Option(True, "--triage/--no-triage", help="Άμεση ταξινόμηση")):
+    """Χειροκίνητο capture στο inbox."""
+    from .inbox.capture import capture
+    from .inbox.triage import KIND_LABELS, apply_triage
+
+    conn = db.get_conn()
+    item_id = capture(conn, "manual", content)
+    console.print(f"📥 Καταχωρήθηκε [cyan]#{item_id}[/]")
+    if triage_now:
+        result = apply_triage(conn, dict(db.get_inbox_item(conn, item_id)))
+        console.print(f"   → [bold]{KIND_LABELS[result.kind]}[/] · {result.reason}")
+    conn.close()
+
+
+@inbox_app.command("list")
+def inbox_list(status: str = typer.Option(None, "--status", help="new | triaged | done"),
+               limit: int = typer.Option(30, "--limit")):
+    """Λίστα inbox items (νεότερα πρώτα)."""
+    from .inbox.triage import KIND_LABELS
+
+    conn = db.get_conn()
+    rows = db.list_inbox(conn, status=status, limit=limit)
+    conn.close()
+    table = Table(title="Inbox", header_style="bold")
+    table.add_column("#", justify="right")
+    table.add_column("Πηγή")
+    table.add_column("Κατηγορία")
+    table.add_column("Περιεχόμενο", max_width=50)
+    table.add_column("Αιτιολόγηση", max_width=40)
+    for r in rows:
+        kind = KIND_LABELS.get(r["kind"], "—") if r["kind"] else "[yellow]νέο[/]"
+        table.add_row(str(r["id"]), r["source"], kind, r["content"], r["reason"] or "")
+    console.print(table)
+
+
+@inbox_app.command("triage")
+def inbox_triage(use_ai: bool = typer.Option(False, "--ai", help="AI triage μέσω LLM agent (πραγματική κλήση)")):
+    """Ταξινόμηση όλων των νέων items (inbox-zero ritual)."""
+    from .inbox.triage import KIND_LABELS, apply_triage
+
+    conn = db.get_conn()
+    if use_ai:
+        sync_registry(conn)
+    rows = db.list_inbox(conn, status="new", limit=500)
+    if not rows:
+        console.print("✨ Inbox zero — τίποτα για ταξινόμηση.")
+        conn.close()
+        return
+    for r in rows:
+        result = apply_triage(conn, dict(r), use_ai=use_ai)
+        console.print(f"#{r['id']:>3} → [bold]{KIND_LABELS[result.kind]}[/] · {result.reason}")
+    conn.close()
+
+
+@inbox_app.command("watch")
+def inbox_watch(interval: float = typer.Option(2.0, "--interval", help="Δευτερόλεπτα μεταξύ σαρώσεων"),
+                triage_now: bool = typer.Option(True, "--triage/--no-triage", help="Άμεση ταξινόμηση νέων")):
+    """Watcher daemon: παρακολουθεί τους watched φακέλους για νέα αρχεία."""
+    from .config import watch_dirs
+    from .inbox.capture import watch_loop
+    from .inbox.triage import KIND_LABELS, apply_triage
+
+    dirs = watch_dirs()
+    console.print("👀 Παρακολούθηση: " + ", ".join(f"[cyan]{d}[/]" for d in dirs) + " (Ctrl-C για στοπ)")
+
+    def on_new(item: dict):
+        console.print(f"📥 Νέο αρχείο: [cyan]{item['content']}[/]")
+        if triage_now:
+            conn = db.get_conn()
+            result = apply_triage(conn, item)
+            conn.close()
+            console.print(f"   → [bold]{KIND_LABELS[result.kind]}[/] · {result.reason}")
+
+    watch_loop(interval_s=interval, dirs=dirs, on_new=on_new)
+
+
+@connectors_app.command("list")
+def connectors_list():
+    """Λίστα connectors και διαθεσιμότητα των CLIs τους."""
+    from .connectors import load_connectors
+
+    table = Table(title="Connectors", header_style="bold")
+    table.add_column("Όνομα", style="cyan")
+    table.add_column("CLI")
+    table.add_column("Auth")
+    table.add_column("Διαθέσιμο", justify="center")
+    table.add_column("Actions", max_width=40)
+    for c in load_connectors():
+        table.add_row(
+            c.name, c.binary, c.auth,
+            "[green]✓[/]" if c.available else "[red]✗[/]",
+            ", ".join(c.actions),
+        )
+    console.print(table)
+
+
+@connectors_app.command("run")
+def connectors_run(name: str = typer.Argument(..., help="Όνομα connector"),
+                   action: str = typer.Argument(..., help="Action"),
+                   args: list[str] = typer.Argument(None, help="Πρόσθετα ορίσματα")):
+    """Εκτέλεση action ενός connector (πραγματικό CLI, ζωντανό output)."""
+    from .connectors import get_connector, run_action
+
+    connector = get_connector(name)
+    if connector is None:
+        console.print(f"[red]Άγνωστος connector: '{name}'. Δοκίμασε: mission-control connectors list[/]")
+        raise typer.Exit(code=2)
+    raise typer.Exit(code=run_action(connector, action, args or []))
 
 
 @app.command("serve")

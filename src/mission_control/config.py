@@ -23,6 +23,23 @@ VAULT_DIR = Path(os.environ.get("MC_VAULT_DIR", DATA_DIR / "vault"))
 SESSIONS_SUBDIR = "MissionControl/Sessions"
 MOC_PATH = "MissionControl/MOC.md"
 
+CONNECTORS_DIR = Path(os.environ.get("MC_CONNECTORS_DIR", ROOT / "connectors"))
+
+# Inbox watcher: φάκελοι που παρακολουθούνται (colon-separated στο MC_WATCH_DIRS).
+# Default: ~/Desktop και ~/Downloads αν υπάρχουν, αλλιώς data/inbox-drop.
+def watch_dirs() -> list[Path]:
+    env = os.environ.get("MC_WATCH_DIRS")
+    if env:
+        return [Path(p).expanduser() for p in env.split(":") if p.strip()]
+    candidates = [Path.home() / "Desktop", Path.home() / "Downloads"]
+    existing = [p for p in candidates if p.is_dir()]
+    if existing:
+        return existing
+    fallback = DATA_DIR / "inbox-drop"
+    fallback.mkdir(parents=True, exist_ok=True)
+    return [fallback]
+
+
 API_PORT = int(os.environ.get("MC_API_PORT", "8777"))
 DASHBOARD_ORIGIN = os.environ.get("MC_DASHBOARD_ORIGIN", "http://localhost:7777")
 

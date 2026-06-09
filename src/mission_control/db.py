@@ -54,6 +54,18 @@ CREATE TABLE IF NOT EXISTS artifacts (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS inbox (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  source     TEXT NOT NULL,              -- file | manual | email | voice
+  content    TEXT NOT NULL,              -- path αρχείου ή ελεύθερο κείμενο
+  kind       TEXT,                       -- task|project|reference|archive|review
+  reason     TEXT,                       -- αιτιολόγηση ταξινόμησης
+  status     TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new','triaged','done')),
+  meta       TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL,
+  triaged_at TEXT
+);
+
 CREATE TABLE IF NOT EXISTS events (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   run_id     TEXT,
@@ -158,6 +170,40 @@ def recover_stale_runs(conn: sqlite3.Connection) -> int:
     )
     conn.commit()
     return cur.rowcount
+
+
+# ---------- inbox ----------
+
+def insert_inbox_item(conn: sqlite3.Connection, source: str, content: str, meta: dict | None = None) -> int:
+    cur = conn.execute(
+        "INSERT INTO inbox (source, content, meta, created_at) VALUES (?, ?, ?, ?)",
+        (source, content, json.dumps(meta or {}, ensure_ascii=False), now_iso()),
+    )
+    conn.commit()
+    return cur.lastrowid
+
+
+def list_inbox(conn: sqlite3.Connection, status: str | None = None, limit: int = 50) -> list[sqlite3.Row]:
+    if status:
+        return conn.execute(
+            "SELECT * FROM inbox WHERE status = ? ORDER BY created_at DESC LIMIT ?", (status, limit)
+        ).fetchall()
+    return conn.execute("SELECT * FROM inbox ORDER BY created_at DESC LIMIT ?", (limit,)).fetchall()
+
+
+def get_inbox_item(conn: sqlite3.Connection, item_id: int) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM inbox WHERE id = ?", (item_id,)).fetchone()
+
+
+def update_inbox_item(conn: sqlite3.Connection, item_id: int, **fields) -> None:
+    cols = ", ".join(f"{k} = :{k}" for k in fields)
+    conn.execute(f"UPDATE inbox SET {cols} WHERE id = :id", {**fields, "id": item_id})
+    conn.commit()
+
+
+def inbox_has_path(conn: sqlite3.Connection, path: str) -> bool:
+    row = conn.execute("SELECT 1 FROM inbox WHERE source='file' AND content = ? LIMIT 1", (path,)).fetchone()
+    return row is not None
 
 
 # ---------- artifacts ----------

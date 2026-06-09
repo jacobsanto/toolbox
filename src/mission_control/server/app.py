@@ -112,6 +112,44 @@ def create_run(body: RunCreate) -> Run:
     return Run.from_row(row)
 
 
+@app.get("/api/inbox")
+def get_inbox(status: str | None = None, limit: int = 50) -> list[dict]:
+    conn = db.get_conn()
+    rows = db.list_inbox(conn, status=status, limit=limit)
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+@app.post("/api/inbox", status_code=201)
+def create_inbox_item(body: dict) -> dict:
+    from ..inbox.capture import capture
+    from ..inbox.triage import apply_triage
+
+    content = (body.get("content") or "").strip()
+    if not content:
+        raise HTTPException(status_code=422, detail="Το περιεχόμενο είναι κενό")
+    conn = db.get_conn()
+    item_id = capture(conn, body.get("source", "manual"), content)
+    if item_id is None:
+        conn.close()
+        raise HTTPException(status_code=409, detail="Το item απορρίφθηκε (off-limits ή διπλό)")
+    if body.get("triage", True):
+        apply_triage(conn, dict(db.get_inbox_item(conn, item_id)))
+    item = dict(db.get_inbox_item(conn, item_id))
+    conn.close()
+    return item
+
+
+@app.get("/api/connectors")
+def get_connectors() -> list[dict]:
+    from ..connectors import load_connectors
+
+    return [
+        {**c.model_dump(exclude={"source_path"}), "available": c.available}
+        for c in load_connectors()
+    ]
+
+
 @app.get("/api/memory/search")
 def memory_search(q: str, k: int = 5) -> list[dict]:
     from ..memory.context import search

@@ -11,6 +11,8 @@
 - 🌐 **API** (FastAPI, θύρα 8777) — agents, runs, υποβολή νέου run, **SSE live feed** που βλέπει και τα runs του CLI (cross-process event bus πάνω από SQLite).
 - 🖥️ **Dashboard** (Next.js, θύρα 7777) — κάρτες πρακτόρων, ιστορικό εκτελέσεων, ζωντανή ροή, φόρμα «Νέα εκτέλεση». Dark mode by default.
 - 🧠 **Memory Layer (Obsidian)** — κάθε run γράφει αυτόματα session note στο vault, αναζήτηση accent-insensitive στα Ελληνικά, context injection σε LLM agents πριν από κάθε task, αυτόματο MOC index. Δείξε το `MC_VAULT_DIR` στο πραγματικό σου vault.
+- 📥 **Inbox** — universal capture: αρχεία (watcher στους `MC_WATCH_DIRS`, default Desktop/Downloads), σκέψεις, links. Triage σε Εργασία/Project/Αναφορά/Αρχείο/Έλεγχο — με κανόνες (δωρεάν) ή με AI (`--ai`, πραγματική κλήση LLM μέσω του runner). Ελληνικοί επιχειρησιακοί κανόνες embedded: τα Παρ_/Πλη_/ΤΑΚΚ/ΤΠΥ δεν μετονομάζονται ποτέ, ο φάκελος «ΙΑΚΩΒΟΣ ΠΡΟΣ ΤΡΑΠΕΖΑ» είναι off-limits.
+- 🔌 **Integrations Hub** — connectors σε YAML (`connectors/*.yaml`): GitHub (gh), Google Drive (gws), filesystem. Νέο integration = νέο YAML, χωρίς κώδικα.
 
 ## Γρήγορη εκκίνηση
 
@@ -28,6 +30,17 @@ export MC_VAULT_DIR=~/Obsidian/MyVault      # προαιρετικό — default
 uv run mission-control memory status
 uv run mission-control memory search "τιμολόγια Arivia"
 uv run mission-control memory moc           # (ανα)παράγει το Map of Content
+
+# Inbox
+uv run mission-control inbox add "πρέπει να στείλω την προσφορά"
+uv run mission-control inbox watch          # watcher daemon (Ctrl-C για στοπ)
+uv run mission-control inbox triage --ai    # AI ταξινόμηση των νέων items
+uv run mission-control inbox list
+
+# Connectors
+uv run mission-control connectors list
+uv run mission-control connectors run github prs
+uv run mission-control connectors run filesystem recent ~/Projects
 
 # API server
 uv run mission-control serve              # http://127.0.0.1:8777 (δες /docs για OpenAPI)
@@ -81,8 +94,6 @@ timeout_s: 1800
 
 ## Roadmap (επόμενα phases)
 
-- 📥 Inbox — universal capture + AI triage
-- 🔌 Integrations Hub — connectors (Google Workspace, GitHub, Hue)
 - 📊 Reflection — ημερήσιο/εβδομαδιαίο recap στο Obsidian
 - 🎙️ «Ask the OS» — ελληνικό voice & query layer (Whisper STT, Edge TTS)
 - 🧬 Self-evolving standards + budget alerts
