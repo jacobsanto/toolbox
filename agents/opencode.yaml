@@ -1,0 +1,10 @@
+# Κάρτα πράκτορα — OpenCode
+name: opencode
+display_name: "OpenCode"
+description: "Open-source πράκτορας προγραμματισμού για το terminal"
+binary: opencode
+command: "opencode run {task}"
+capabilities: [code, agentic]
+budget_scope: personal
+cost: { currency: EUR, est_per_run: 0.20 }
+timeout_s: 3600

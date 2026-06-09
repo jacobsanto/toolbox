@@ -1,0 +1,12 @@
+# Κάρτα πράκτορα — Γενικό κέλυφος
+# ΔΕΝ είναι mock: εκτελεί πραγματικές εντολές bash. Χρήσιμο για demo/scripting
+# σε μηχανήματα όπου τα AI CLIs δεν είναι εγκατεστημένα.
+name: shell
+display_name: "Shell"
+description: "Γενικός πράκτορας κελύφους — εκτελεί πραγματικές εντολές bash"
+binary: bash
+command: "bash -lc {task}"
+capabilities: [shell, scripting]
+budget_scope: personal
+cost: { currency: EUR, est_per_run: 0.0 }
+timeout_s: 600
