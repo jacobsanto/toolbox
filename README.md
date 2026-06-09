@@ -20,6 +20,8 @@
 
 ## Γρήγορη εκκίνηση
 
+> 💡 Πρώτη ρύθμιση: δες το `.env.example` — το σημαντικότερο είναι το `MC_VAULT_DIR` που δείχνει στο πραγματικό σου Obsidian vault.
+
 ```bash
 # Backend + CLI
 uv sync
