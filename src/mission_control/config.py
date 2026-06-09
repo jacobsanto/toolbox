@@ -17,6 +17,12 @@ LOG_DIR = DATA_DIR / "logs"
 DB_PATH = Path(os.environ.get("MC_DB_PATH", DATA_DIR / "mission_control.db"))
 AGENTS_DIR = Path(os.environ.get("MC_AGENTS_DIR", ROOT / "agents"))
 
+# Obsidian vault: δείξε το MC_VAULT_DIR στο πραγματικό σου vault στο Mac.
+# Default: data/vault — δουλεύει out-of-the-box για demo/νέα εγκατάσταση.
+VAULT_DIR = Path(os.environ.get("MC_VAULT_DIR", DATA_DIR / "vault"))
+SESSIONS_SUBDIR = "MissionControl/Sessions"
+MOC_PATH = "MissionControl/MOC.md"
+
 API_PORT = int(os.environ.get("MC_API_PORT", "8777"))
 DASHBOARD_ORIGIN = os.environ.get("MC_DASHBOARD_ORIGIN", "http://localhost:7777")
 

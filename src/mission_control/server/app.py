@@ -91,16 +91,41 @@ def get_run(run_id: str) -> dict:
 @app.post("/api/runs", status_code=201)
 def create_run(body: RunCreate) -> Run:
     conn = db.get_conn()
-    sync_registry(conn)
+    cards = sync_registry(conn)
     if db.get_agent(conn, body.agent_id) is None:
         conn.close()
         raise HTTPException(status_code=404, detail=f"Άγνωστος πράκτορας: '{body.agent_id}'")
-    run_id = submit_run(conn, body.agent_id, body.task)
+    task = body.task
+    # Ίδιος κανόνας με το CLI: context injection μόνο όπου το δηλώνει η κάρτα
+    card = next((c for c in cards if c.name == body.agent_id), None)
+    if card and card.inject_context:
+        from ..memory.context import build_context
+
+        ctx = build_context(task)
+        if ctx:
+            task = f"{ctx}\n\n---\n\n{task}"
+    run_id = submit_run(conn, body.agent_id, task)
     row = db.get_run(conn, run_id)
     conn.close()
     # Εκτέλεση σε daemon thread — ο runner είναι blocking by design
     threading.Thread(target=execute_run, args=(run_id,), kwargs={"echo": False}, daemon=True).start()
     return Run.from_row(row)
+
+
+@app.get("/api/memory/search")
+def memory_search(q: str, k: int = 5) -> list[dict]:
+    from ..memory.context import search
+
+    return [
+        {
+            "path": r.note.rel_path,
+            "title": r.note.title,
+            "tags": r.note.tags,
+            "score": r.score,
+            "snippet": r.snippet,
+        }
+        for r in search(q, k=k)
+    ]
 
 
 @app.get("/api/events")

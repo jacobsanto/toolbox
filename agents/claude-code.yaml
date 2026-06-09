@@ -8,3 +8,4 @@ capabilities: [code, refactor, agentic, files]
 budget_scope: arivia
 cost: { currency: EUR, est_per_run: 0.50 }
 timeout_s: 3600
+inject_context: true

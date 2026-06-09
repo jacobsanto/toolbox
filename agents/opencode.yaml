@@ -8,3 +8,4 @@ capabilities: [code, agentic]
 budget_scope: personal
 cost: { currency: EUR, est_per_run: 0.20 }
 timeout_s: 3600
+inject_context: true

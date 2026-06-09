@@ -41,6 +41,9 @@ class AgentCard(BaseModel):
     cost: CostConfig = Field(default_factory=CostConfig)
     timeout_s: int = 3600
     env: dict[str, str] = Field(default_factory=dict)
+    # Context injection (RAG-lite): μόνο για LLM agents — σε shell εντολές
+    # το επιπλέον κείμενο θα τις χαλούσε
+    inject_context: bool = False
     source_path: str = ""  # συμπληρώνεται από το registry κατά τη φόρτωση
 
     @field_validator("name")

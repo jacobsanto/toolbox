@@ -128,6 +128,7 @@ def execute_run(run_id: str, *, echo: bool = True) -> Run:
             finished_at=db.now_iso(), duration_ms=duration_ms,
         )
         db.insert_artifact(conn, run_id, kind="log", path=str(log_path))
+        _write_memory_note(conn, run_id, agent)
         if status == "cancelled":
             emit(conn, "run.cancelled", run_id, agent_id=run["agent_id"])
         else:
@@ -142,3 +143,15 @@ def _find_card(agent_id: str):
     from .registry import load_cards
 
     return next((c for c in load_cards() if c.name == agent_id), None)
+
+
+def _write_memory_note(conn, run_id: str, agent_row) -> None:
+    """Γράφει session note στο vault. Αποτυχία μνήμης ΔΕΝ ρίχνει το run."""
+    from .memory.notes import write_session_note
+
+    try:
+        run = dict(db.get_run(conn, run_id))
+        note_path = write_session_note(run, budget_scope=agent_row["budget_scope"])
+        db.insert_artifact(conn, run_id, kind="note", path=str(note_path))
+    except Exception as exc:  # noqa: BLE001
+        print(f"⚠️  Αποτυχία εγγραφής σημείωσης μνήμης: {exc}")

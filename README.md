@@ -10,6 +10,7 @@
 - ▶️ **Runner** — εκτέλεση task με ζωντανό streaming output, καταγραφή log ανά run, statuses: `queued / running / done / error / cancelled`.
 - 🌐 **API** (FastAPI, θύρα 8777) — agents, runs, υποβολή νέου run, **SSE live feed** που βλέπει και τα runs του CLI (cross-process event bus πάνω από SQLite).
 - 🖥️ **Dashboard** (Next.js, θύρα 7777) — κάρτες πρακτόρων, ιστορικό εκτελέσεων, ζωντανή ροή, φόρμα «Νέα εκτέλεση». Dark mode by default.
+- 🧠 **Memory Layer (Obsidian)** — κάθε run γράφει αυτόματα session note στο vault, αναζήτηση accent-insensitive στα Ελληνικά, context injection σε LLM agents πριν από κάθε task, αυτόματο MOC index. Δείξε το `MC_VAULT_DIR` στο πραγματικό σου vault.
 
 ## Γρήγορη εκκίνηση
 
@@ -21,6 +22,12 @@ uv run mission-control agents list        # ποιοι πράκτορες υπά
 uv run mission-control run shell "echo Γεια σου && date"
 uv run mission-control runs list
 uv run mission-control runs show <run_id>
+
+# Μνήμη (Obsidian)
+export MC_VAULT_DIR=~/Obsidian/MyVault      # προαιρετικό — default: data/vault
+uv run mission-control memory status
+uv run mission-control memory search "τιμολόγια Arivia"
+uv run mission-control memory moc           # (ανα)παράγει το Map of Content
 
 # API server
 uv run mission-control serve              # http://127.0.0.1:8777 (δες /docs για OpenAPI)
@@ -74,7 +81,6 @@ timeout_s: 1800
 
 ## Roadmap (επόμενα phases)
 
-- 🧠 Obsidian Memory Layer — session notes, context injection (RAG-lite)
 - 📥 Inbox — universal capture + AI triage
 - 🔌 Integrations Hub — connectors (Google Workspace, GitHub, Hue)
 - 📊 Reflection — ημερήσιο/εβδομαδιαίο recap στο Obsidian

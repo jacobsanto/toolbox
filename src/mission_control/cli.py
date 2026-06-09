@@ -21,8 +21,10 @@ from .runner import execute_run, submit_run
 app = typer.Typer(name=APP_NAME, no_args_is_help=True, help="Mission Control — Agentic OS")
 agents_app = typer.Typer(help="Διαχείριση πρακτόρων")
 runs_app = typer.Typer(help="Ιστορικό εκτελέσεων")
+memory_app = typer.Typer(help="Μνήμη (Obsidian vault)")
 app.add_typer(agents_app, name="agents")
 app.add_typer(runs_app, name="runs")
+app.add_typer(memory_app, name="memory")
 
 console = Console()
 
@@ -86,15 +88,26 @@ def agents_list():
 
 @app.command("run")
 def run_task(agent: str = typer.Argument(..., help="ID πράκτορα"),
-             task: str = typer.Argument(..., help="Περιγραφή εργασίας")):
+             task: str = typer.Argument(..., help="Περιγραφή εργασίας"),
+             context: bool = typer.Option(True, "--context/--no-context",
+                                          help="Έγχυση σχετικού context από τη μνήμη (μόνο για LLM agents)")):
     """Εκτέλεση task σε πράκτορα, με ζωντανό output."""
     conn = db.get_conn()
-    sync_registry(conn)
+    cards = sync_registry(conn)
     try:
         require_agent(conn, agent)
     except KeyError as exc:
         console.print(f"[red]{exc.args[0]}[/]")
         raise typer.Exit(code=2)
+    # Context injection: μόνο αν η κάρτα το δηλώνει (inject_context: true)
+    card = next((c for c in cards if c.name == agent), None)
+    if context and card and card.inject_context:
+        from .memory.context import build_context
+
+        ctx = build_context(task)
+        if ctx:
+            console.print(f"[dim]🧠 Έγχυση context: {ctx.count(chr(10))} σχετικές σημειώσεις[/]")
+            task = f"{ctx}\n\n---\n\n{task}"
     run_id = submit_run(conn, agent, task)
     conn.close()
     console.print(f"▶ Εκτέλεση [cyan]{run_id}[/] στον πράκτορα [bold]{agent}[/]…\n")
@@ -147,6 +160,52 @@ def runs_show(run_id: str = typer.Argument(..., help="ID εκτέλεσης"),
         console.rule(f"Log ({len(tail)} γραμμές)")
         for line in tail:
             console.print(line, markup=False, highlight=False)
+
+
+@memory_app.command("status")
+def memory_status():
+    """Κατάσταση του vault: πόσες σημειώσεις, πού."""
+    from .config import VAULT_DIR
+    from .memory.vault import scan_vault
+
+    notes = scan_vault()
+    console.print(f"📂 Vault: [cyan]{VAULT_DIR}[/]" + ("" if VAULT_DIR.exists() else " [red](δεν υπάρχει ακόμα)[/]"))
+    console.print(f"📝 Σημειώσεις: [bold]{len(notes)}[/]")
+    tags: dict[str, int] = {}
+    for n in notes:
+        for t in n.tags:
+            tags[t] = tags.get(t, 0) + 1
+    if tags:
+        top = ", ".join(f"#{t} ({c})" for t, c in sorted(tags.items(), key=lambda x: -x[1])[:10])
+        console.print(f"🏷️  Κορυφαία tags: {top}")
+
+
+@memory_app.command("search")
+def memory_search(query: str = typer.Argument(..., help="Ερώτημα αναζήτησης"),
+                  k: int = typer.Option(5, "--limit", "-k", help="Μέγιστα αποτελέσματα")):
+    """Αναζήτηση στις σημειώσεις του vault (accent-insensitive, ελληνικά OK)."""
+    from .memory.context import search
+
+    results = search(query, k=k)
+    if not results:
+        console.print("[yellow]Δεν βρέθηκαν σχετικές σημειώσεις.[/]")
+        raise typer.Exit()
+    table = Table(title=f"Αποτελέσματα για «{query}»", header_style="bold")
+    table.add_column("Σημείωση", style="cyan")
+    table.add_column("Σκορ", justify="right")
+    table.add_column("Απόσπασμα", max_width=60)
+    for r in results:
+        table.add_row(r.note.rel_path, f"{r.score:.1f}", r.snippet)
+    console.print(table)
+
+
+@memory_app.command("moc")
+def memory_moc():
+    """(Ανα)δημιουργία του Map of Content index."""
+    from .memory.moc import generate_moc
+
+    path = generate_moc()
+    console.print(f"🗺️  Το MOC γράφτηκε: [cyan]{path}[/]")
 
 
 @app.command("serve")

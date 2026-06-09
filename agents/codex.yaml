@@ -8,3 +8,4 @@ capabilities: [code, agentic, files]
 budget_scope: titan
 cost: { currency: EUR, est_per_run: 0.40 }
 timeout_s: 3600
+inject_context: true
