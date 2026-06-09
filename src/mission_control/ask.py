@@ -76,6 +76,8 @@ def synthesize(query: str, sources: list[Source], agent_id: str = "claude-code")
     """Σύνθεση απάντησης από πραγματικό LLM agent. None αν δεν γίνεται."""
     from .runner import execute_run, submit_run
 
+    from .budgets import BudgetExceeded
+
     if not sources:
         return None
     conn = db.get_conn()
@@ -87,7 +89,10 @@ def synthesize(query: str, sources: list[Source], agent_id: str = "claude-code")
             f"[{i}] ({s.kind}: {s.ref}) {s.title} — {s.snippet}"
             for i, s in enumerate(sources, 1)
         )
+        # Εξαντλημένο budget → επιστρέφουμε μόνο τις πηγές, χωρίς σύνθεση
         run_id = submit_run(conn, agent_id, SYNTH_PROMPT.format(query=query, sources=listed))
+    except BudgetExceeded:
+        return None
     finally:
         conn.close()
     result = execute_run(run_id, echo=False)

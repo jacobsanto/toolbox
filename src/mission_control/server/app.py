@@ -99,12 +99,18 @@ def create_run(body: RunCreate) -> Run:
     # Ίδιος κανόνας με το CLI: context injection μόνο όπου το δηλώνει η κάρτα
     card = next((c for c in cards if c.name == body.agent_id), None)
     if card and card.inject_context:
-        from ..memory.context import build_context
+        from ..standards import llm_preamble
 
-        ctx = build_context(task)
+        ctx = llm_preamble(task)
         if ctx:
             task = f"{ctx}\n\n---\n\n{task}"
-    run_id = submit_run(conn, body.agent_id, task)
+    from ..budgets import BudgetExceeded
+
+    try:
+        run_id = submit_run(conn, body.agent_id, task)
+    except BudgetExceeded as exc:
+        conn.close()
+        raise HTTPException(status_code=429, detail=str(exc))
     row = db.get_run(conn, run_id)
     conn.close()
     # Εκτέλεση σε daemon thread — ο runner είναι blocking by design
@@ -147,6 +153,23 @@ def get_connectors() -> list[dict]:
     return [
         {**c.model_dump(exclude={"source_path"}), "available": c.available}
         for c in load_connectors()
+    ]
+
+
+@app.get("/api/budgets")
+def get_budgets() -> list[dict]:
+    from ..budgets import all_usage
+
+    conn = db.get_conn()
+    sync_registry(conn)
+    usages = all_usage(conn)
+    conn.close()
+    return [
+        {
+            "scope": u.scope, "month_eur": u.month_eur, "monthly_limit_eur": u.monthly_limit_eur,
+            "today_runs": u.today_runs, "daily_limit_runs": u.daily_limit_runs, "level": u.level,
+        }
+        for u in usages
     ]
 
 

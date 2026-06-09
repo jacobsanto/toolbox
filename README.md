@@ -15,6 +15,8 @@
 - 🔌 **Integrations Hub** — connectors σε YAML (`connectors/*.yaml`): GitHub (gh), Google Drive (gws), filesystem. Νέο integration = νέο YAML, χωρίς κώδικα.
 - 📊 **Reflection** — αυτόματο ημερήσιο recap (`Journal/<date>.md`) και εβδομαδιαίο review στο vault, με στατιστικά, blockers και wikilinks στα session notes. Προαιρετικό AI αφήγημα (`--ai`).
 - 🎙️ **«Ask the OS»** — μία ερώτηση στα Ελληνικά ψάχνει ΠΑΝΤΟΥ (notes, runs, inbox) και συνθέτει απάντηση με citations μέσω πραγματικού LLM. Voice: `say` (edge-tts, ελληνικές φωνές), `transcribe` (whisper, τοπικά), `brief --speak` για πρωινή ενημέρωση τύπου Jarvis.
+- 💰 **Budgets** — όρια ανά scope στο `budgets.yaml` (€/μήνα, runs/ημέρα). Warning στο 80%, hard stop στο 100% με `--force` override. Όταν εξαντληθεί το budget, τα AI extras (triage, σύνθεση) πέφτουν αυτόματα σε κανόνες/πηγές.
+- 🧬 **Self-Evolving Standards** — το OS ανιχνεύει patterns από τη χρήση (προτιμήσεις πρακτόρων, επαναλαμβανόμενα σφάλματα, ταξινομήσεις inbox). Μόνο τα ≥80% confidence γίνονται auto-rules στο `Standards/` του vault — η διαγραφή του αρχείου απενεργοποιεί τον κανόνα. Πάγιοι κανόνες + learned standards + σχετικές σημειώσεις εγχέονται σε κάθε LLM εργασία.
 
 ## Γρήγορη εκκίνηση
 
@@ -51,6 +53,11 @@ uv run mission-control ask "Τι έγινε με τα τιμολόγια Arivia;
 uv run mission-control brief --speak        # πρωινή ενημέρωση + ελληνικό TTS
 uv run mission-control say "Γεια σου Ιάκωβε"
 uv run mission-control transcribe ~/voice-memo.m4a
+
+# Budgets & Standards
+uv run mission-control budgets              # χρήση ανά scope (Arivia/Titan/Personal)
+uv run mission-control standards detect     # ανίχνευση patterns → auto-rules στο vault
+uv run mission-control standards list       # πάγιοι + learned κανόνες
 
 # API server
 uv run mission-control serve              # http://127.0.0.1:8777 (δες /docs για OpenAPI)
@@ -100,8 +107,11 @@ timeout_s: 1800
 
 ## Budget scopes
 
-Κάθε πράκτορας ανήκει σε ένα από τα 3 scopes: **Arivia**, **Titan**, **Personal** — η βάση για το cost tracking και τα budgets των επόμενων phases.
+Κάθε πράκτορας ανήκει σε ένα από τα 3 scopes: **Arivia**, **Titan**, **Personal**. Τα όρια ορίζονται στο `budgets.yaml` και το προφίλ/οι πάγιοι κανόνες στο `profile.yaml`.
 
-## Roadmap (επόμενα phases)
+## Roadmap (μελλοντικά)
 
-- 🧬 Self-evolving standards + budget alerts
+- Embeddings (ChromaDB/LanceDB) πίσω από το ίδιο memory API
+- User-defined flows («όταν PR merged → γράψε στο Obsidian → notification») πάνω στα connector events
+- LLM-powered pattern detection στα session notes
+- Inbox & budgets σελίδες στο dashboard

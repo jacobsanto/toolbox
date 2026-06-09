@@ -41,9 +41,24 @@ def _scope_of(conn, agent_id: str) -> str:
     return row["budget_scope"] if row else "personal"
 
 
+def _est_cost(conn, runs: list[dict]) -> float:
+    """Εκτιμώμενο κόστος: est_per_run της κάρτας × runs του πράκτορα."""
+    import json
+
+    total = 0.0
+    for r in runs:
+        agent = db.get_agent(conn, r["agent_id"])
+        if agent:
+            cost = json.loads(agent["cost_config"] or "{}")
+            total += float(cost.get("est_per_run", 0.0))
+    return total
+
+
 def _ai_summary(text: str, agent_id: str = "claude-code") -> str | None:
     """Αφηγηματική σύνοψη από πραγματικό LLM agent. None αν δεν υπάρχει/αποτύχει."""
     from .runner import execute_run, submit_run
+
+    from .budgets import BudgetExceeded
 
     conn = db.get_conn()
     try:
@@ -55,6 +70,8 @@ def _ai_summary(text: str, agent_id: str = "claude-code") -> str | None:
             + text
         )
         run_id = submit_run(conn, agent_id, prompt)
+    except BudgetExceeded:
+        return None
     finally:
         conn.close()
     result = execute_run(run_id, echo=False)
@@ -96,6 +113,7 @@ def daily_recap(day: str | None = None, use_ai: bool = False) -> Path:
         f"- Ανά scope: " + (", ".join(f"{s} ({c})" for s, c in by_scope.most_common()) or "—"),
         f"- Inbox: {len(inbox)} νέα items"
         + (" — " + ", ".join(f"{k} ({c})" for k, c in inbox_kinds.most_common()) if inbox_kinds else ""),
+        f"- Εκτιμώμενο κόστος ημέρας: {_est_cost(conn, runs):.2f}€",
     ]
 
     if runs:

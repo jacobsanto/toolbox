@@ -104,12 +104,17 @@ def triage_with_ai(source: str, content: str, agent_id: str = "claude-code") -> 
     from .. import db
     from ..runner import execute_run, submit_run
 
+    from ..budgets import BudgetExceeded
+
     conn = db.get_conn()
     try:
         if db.get_agent(conn, agent_id) is None:
             return None
         task = AI_PROMPT.format(source=source, content=content[:1500])
+        # Εξαντλημένο budget → πέφτουμε σιωπηλά στους κανόνες (στρώμα 1)
         run_id = submit_run(conn, agent_id, task)
+    except BudgetExceeded:
+        return None
     finally:
         conn.close()
     result = execute_run(run_id, echo=False)

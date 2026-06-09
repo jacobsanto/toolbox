@@ -33,8 +33,15 @@ def build_argv(command_template: str, task: str) -> list[str]:
     return [task if tok == "{task}" else tok for tok in argv]
 
 
-def submit_run(conn, agent_id: str, task: str) -> str:
-    """Δημιουργεί queued run + event. Επιστρέφει το run id."""
+def submit_run(conn, agent_id: str, task: str, force: bool = False) -> str:
+    """Δημιουργεί queued run + event. Επιστρέφει το run id.
+
+    Σηκώνει BudgetExceeded αν το scope έχει εξαντλήσει το όριό του (100%)
+    και δεν δόθηκε force — το warning (80%) απλώς εκπέμπει event.
+    """
+    from .budgets import enforce
+
+    enforce(conn, agent_id, force=force)
     run_id = db.new_run_id()
     db.insert_run(conn, run_id, agent_id, task)
     emit(conn, "run.queued", run_id, agent_id=agent_id, task=task)
