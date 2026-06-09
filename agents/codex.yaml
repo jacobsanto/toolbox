@@ -1,0 +1,11 @@
+# Κάρτα πράκτορα — Codex CLI (OpenAI)
+name: codex
+display_name: "Codex CLI"
+description: "Πράκτορας προγραμματισμού της OpenAI (CLI)"
+binary: codex
+command: "codex exec {task}"
+capabilities: [code, agentic, files]
+budget_scope: titan
+cost: { currency: EUR, est_per_run: 0.40 }
+timeout_s: 3600
+inject_context: true

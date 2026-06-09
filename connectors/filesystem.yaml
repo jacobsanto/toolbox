@@ -1,0 +1,10 @@
+# Connector — τοπικό filesystem (projects scanner)
+name: filesystem
+display_name: "Filesystem"
+description: "Σάρωση τοπικών projects και πρόσφατων αρχείων"
+binary: find
+auth: none
+actions:
+  recent: "find {args} -maxdepth 3 -type f -mtime -1"
+  projects: "find {args} -maxdepth 3 -type d -name .git"
+events: []

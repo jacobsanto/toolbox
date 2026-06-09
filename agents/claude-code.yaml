@@ -1,0 +1,11 @@
+# Κάρτα πράκτορα — Claude Code CLI (Anthropic)
+name: claude-code
+display_name: "Claude Code"
+description: "Πράκτορας προγραμματισμού της Anthropic (CLI) — agentic coding, refactoring, αρχεία"
+binary: claude
+command: "claude -p {task}"
+capabilities: [code, refactor, agentic, files]
+budget_scope: arivia
+cost: { currency: EUR, est_per_run: 0.50 }
+timeout_s: 3600
+inject_context: true

@@ -1,0 +1,12 @@
+# Connector — GitHub μέσω του επίσημου gh CLI
+name: github
+display_name: "GitHub"
+description: "PRs, issues, CI μέσω gh CLI"
+binary: gh
+auth: cli           # το `gh auth login` χειρίζεται το auth
+actions:
+  prs: "gh pr list"
+  issues: "gh issue list"
+  ci: "gh run list"
+  repo: "gh repo view {args}"
+events: [pr_merged, issue_opened, ci_failed]   # για τα flows του Phase 5+

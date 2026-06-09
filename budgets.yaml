@@ -1,0 +1,12 @@
+# Όρια κόστους/χρήσης ανά budget scope (οι 3 δουλειές του Ιάκωβου).
+# Επεξεργάσιμο αρχείο — το Mission Control το διαβάζει σε κάθε έλεγχο.
+# warning στο 80%, hard stop στο 100% (παράκαμψη με --force).
+arivia:
+  monthly_eur: 100
+  runs_per_day: 200
+titan:
+  monthly_eur: 50
+  runs_per_day: 100
+personal:
+  monthly_eur: 30
+  runs_per_day: 150
