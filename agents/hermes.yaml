@@ -1,0 +1,14 @@
+# Κάρτα πράκτορα — Hermes (ο προσωπικός agent του Ιάκωβου)
+# ⚠️ Προσαρμογή: βάλε το πραγματικό binary και command της δικής σου
+# εγκατάστασης Hermes — το template παρακάτω είναι λογική αφετηρία.
+# Το {task} γίνεται ΕΝΑ argv token (ασφαλές, χωρίς shell injection).
+name: hermes
+display_name: "Hermes"
+description: "Ο προσωπικός πράκτορας του Ιάκωβου — research, αρχεία, καθημερινές εργασίες"
+binary: hermes
+command: "hermes {task}"
+capabilities: [research, files, agentic]
+budget_scope: personal
+cost: { currency: EUR, est_per_run: 0.10 }
+timeout_s: 1800
+inject_context: true   # LLM agent → παίρνει προφίλ + standards + σχετικές σημειώσεις
