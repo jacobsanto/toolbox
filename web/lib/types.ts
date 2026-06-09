@@ -31,6 +31,64 @@ export interface RunDetail extends Run {
   log_tail: string;
 }
 
+export interface InboxItem {
+  id: number;
+  source: string;
+  content: string;
+  kind: string | null;
+  reason: string | null;
+  status: "new" | "triaged" | "done";
+  created_at: string;
+}
+
+export interface BudgetUsage {
+  scope: string;
+  month_eur: number;
+  monthly_limit_eur: number;
+  today_runs: number;
+  daily_limit_runs: number;
+  level: "ok" | "warning" | "exceeded";
+}
+
+export interface Connector {
+  name: string;
+  display_name: string;
+  description: string;
+  binary: string;
+  auth: string;
+  actions: Record<string, string>;
+  events: string[];
+  available: boolean;
+}
+
+export interface AskSource {
+  kind: string;
+  ref: string;
+  title: string;
+  snippet: string;
+  score: number;
+}
+
+export interface MemoryStatus {
+  vault_dir: string;
+  vault_exists: boolean;
+  note_count: number;
+  top_tags: { tag: string; count: number }[];
+}
+
+export interface MemoryResult {
+  path: string;
+  title: string;
+  tags: string[];
+  score: number;
+  snippet: string;
+}
+
+export interface StandardsInfo {
+  fixed: string[];
+  learned: string[];
+}
+
 export interface MCEvent {
   id: number;
   run_id: string | null;

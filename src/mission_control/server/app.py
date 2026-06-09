@@ -65,6 +65,31 @@ def get_agents() -> list[Agent]:
     return agents
 
 
+@app.post("/api/agents", status_code=201)
+def create_agent(body: dict) -> Agent:
+    """Δημιουργία νέας κάρτας πράκτορα από το UI — γράφει YAML στο agents/."""
+    import yaml as _yaml
+
+    from ..config import AGENTS_DIR
+    from ..models import AgentCard
+
+    try:
+        card = AgentCard(**{k: v for k, v in body.items() if k != "source_path"})
+    except Exception as exc:  # noqa: BLE001 — pydantic errors με ελληνικά μηνύματα
+        raise HTTPException(status_code=422, detail=str(exc))
+    path = AGENTS_DIR / f"{card.name}.yaml"
+    if path.exists():
+        raise HTTPException(status_code=409, detail=f"Υπάρχει ήδη πράκτορας '{card.name}'")
+    AGENTS_DIR.mkdir(parents=True, exist_ok=True)
+    data = card.model_dump(exclude={"source_path"})
+    path.write_text(_yaml.safe_dump(data, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    conn = db.get_conn()
+    sync_registry(conn)
+    row = db.get_agent(conn, card.name)
+    conn.close()
+    return Agent.from_row(row)
+
+
 @app.get("/api/runs")
 def get_runs(limit: int = 50) -> list[Run]:
     conn = db.get_conn()
@@ -144,6 +169,92 @@ def create_inbox_item(body: dict) -> dict:
     item = dict(db.get_inbox_item(conn, item_id))
     conn.close()
     return item
+
+
+@app.post("/api/inbox/triage")
+def triage_inbox(body: dict | None = None) -> list[dict]:
+    """Ταξινόμηση όλων των νέων items. body: {"ai": true} για AI triage."""
+    from ..inbox.triage import apply_triage
+
+    use_ai = bool((body or {}).get("ai", False))
+    conn = db.get_conn()
+    if use_ai:
+        sync_registry(conn)
+    rows = db.list_inbox(conn, status="new", limit=500)
+    results = []
+    for r in rows:
+        apply_triage(conn, dict(r), use_ai=use_ai)
+        results.append(dict(db.get_inbox_item(conn, r["id"])))
+    conn.close()
+    return results
+
+
+@app.get("/api/memory/status")
+def memory_status() -> dict:
+    from collections import Counter
+
+    from ..config import VAULT_DIR
+    from ..memory.vault import scan_vault
+
+    notes = scan_vault()
+    tags: Counter = Counter(t for n in notes for t in n.tags)
+    return {
+        "vault_dir": str(VAULT_DIR),
+        "vault_exists": VAULT_DIR.exists(),
+        "note_count": len(notes),
+        "top_tags": [{"tag": t, "count": c} for t, c in tags.most_common(12)],
+    }
+
+
+@app.post("/api/memory/moc")
+def memory_moc() -> dict:
+    from ..memory.moc import generate_moc
+
+    path = generate_moc()
+    return {"path": str(path)}
+
+
+@app.get("/api/standards")
+def get_standards() -> dict:
+    from ..standards import active_rules, load_profile
+
+    profile = load_profile()
+    return {"fixed": profile.get("rules") or [], "learned": active_rules()}
+
+
+@app.post("/api/standards/detect")
+def detect_standards() -> dict:
+    from ..standards import MIN_CONFIDENCE, detect_patterns, write_standards
+
+    conn = db.get_conn()
+    patterns = detect_patterns(conn)
+    conn.close()
+    written = write_standards(patterns)
+    return {
+        "patterns": [
+            {"slug": p.slug, "statement": p.statement, "confidence": p.confidence,
+             "evidence": p.evidence, "kind": p.kind}
+            for p in patterns
+        ],
+        "written": [str(p) for p in written],
+        "min_confidence": MIN_CONFIDENCE,
+    }
+
+
+@app.post("/api/reflect/{period}")
+def reflect(period: str, body: dict | None = None) -> dict:
+    from pathlib import Path as _Path
+
+    from ..reflection import daily_recap, weekly_review
+
+    use_ai = bool((body or {}).get("ai", False))
+    if period == "daily":
+        path = daily_recap(use_ai=use_ai)
+    elif period == "weekly":
+        path = weekly_review(use_ai=use_ai)
+    else:
+        raise HTTPException(status_code=404, detail=f"Άγνωστη περίοδος: '{period}' (daily | weekly)")
+    return {"path": str(path), "content": _Path(path).read_text(encoding="utf-8")}
 
 
 @app.get("/api/connectors")
