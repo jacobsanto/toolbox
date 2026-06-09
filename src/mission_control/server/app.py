@@ -150,6 +150,25 @@ def get_connectors() -> list[dict]:
     ]
 
 
+@app.get("/api/ask")
+def ask_endpoint(q: str, k: int = 5, synthesize_answer: bool = False) -> dict:
+    """Ενιαία αναζήτηση. Η σύνθεση (LLM) είναι opt-in — είναι αργή/κοστίζει."""
+    from ..ask import search_all, synthesize
+
+    sources = search_all(q, k=k)
+    payload = {
+        "query": q,
+        "sources": [
+            {"kind": s.kind, "ref": s.ref, "title": s.title, "snippet": s.snippet, "score": s.score}
+            for s in sources
+        ],
+        "answer": None,
+    }
+    if synthesize_answer and sources:
+        payload["answer"] = synthesize(q, sources)
+    return payload
+
+
 @app.get("/api/memory/search")
 def memory_search(q: str, k: int = 5) -> list[dict]:
     from ..memory.context import search

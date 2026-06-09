@@ -24,11 +24,13 @@ runs_app = typer.Typer(help="Ιστορικό εκτελέσεων")
 memory_app = typer.Typer(help="Μνήμη (Obsidian vault)")
 inbox_app = typer.Typer(help="Inbox — universal capture & triage")
 connectors_app = typer.Typer(help="Integrations Hub (connectors)")
+reflect_app = typer.Typer(help="Reflection — αυτόματο ημερολόγιο στο Obsidian")
 app.add_typer(agents_app, name="agents")
 app.add_typer(runs_app, name="runs")
 app.add_typer(memory_app, name="memory")
 app.add_typer(inbox_app, name="inbox")
 app.add_typer(connectors_app, name="connectors")
+app.add_typer(reflect_app, name="reflect")
 
 console = Console()
 
@@ -322,6 +324,138 @@ def connectors_run(name: str = typer.Argument(..., help="Όνομα connector"),
         console.print(f"[red]Άγνωστος connector: '{name}'. Δοκίμασε: mission-control connectors list[/]")
         raise typer.Exit(code=2)
     raise typer.Exit(code=run_action(connector, action, args or []))
+
+
+@reflect_app.command("daily")
+def reflect_daily(day: str = typer.Option(None, "--date", help="YYYY-MM-DD (default: σήμερα)"),
+                  use_ai: bool = typer.Option(False, "--ai", help="Αφηγηματική σύνοψη από LLM (πραγματική κλήση)")):
+    """Ημερήσιο recap → Journal/<date>.md στο vault."""
+    from .reflection import daily_recap
+
+    path = daily_recap(day, use_ai=use_ai)
+    console.print(f"📊 Το ημερήσιο recap γράφτηκε: [cyan]{path}[/]")
+
+
+@reflect_app.command("weekly")
+def reflect_weekly(use_ai: bool = typer.Option(False, "--ai", help="Αφηγηματική σύνοψη από LLM")):
+    """Εβδομαδιαίο review → Journal/Weekly/<year>-W<ww>.md."""
+    from .reflection import weekly_review
+
+    path = weekly_review(use_ai=use_ai)
+    console.print(f"🗓️  Το εβδομαδιαίο review γράφτηκε: [cyan]{path}[/]")
+
+
+@app.command("ask")
+def ask_os(query: str = typer.Argument(..., help="Ερώτηση στα Ελληνικά"),
+           use_ai: bool = typer.Option(True, "--ai/--no-ai", help="Σύνθεση απάντησης από LLM"),
+           speak_answer: bool = typer.Option(False, "--speak", help="Εκφώνηση της απάντησης (TTS)"),
+           k: int = typer.Option(5, "--limit", "-k")):
+    """«Ask the OS» — ενιαία αναζήτηση παντού + σύνθεση απάντησης."""
+    from .ask import search_all, synthesize
+
+    sources = search_all(query, k=k)
+    if not sources:
+        console.print("[yellow]Δεν βρέθηκε τίποτα σχετικό σε notes, runs ή inbox.[/]")
+        raise typer.Exit()
+
+    table = Table(title=f"Πηγές για «{query}»", header_style="bold")
+    table.add_column("#", justify="right")
+    table.add_column("Είδος")
+    table.add_column("Αναφορά", style="cyan", max_width=35)
+    table.add_column("Απόσπασμα", max_width=55)
+    for i, s in enumerate(sources, 1):
+        table.add_row(str(i), s.kind, s.ref, s.snippet)
+    console.print(table)
+
+    answer = None
+    if use_ai:
+        conn = db.get_conn()
+        sync_registry(conn)
+        conn.close()
+        with console.status("🤖 Σύνθεση απάντησης…"):
+            answer = synthesize(query, sources)
+        if answer:
+            console.print(f"\n[bold]💬 Απάντηση:[/]\n{answer}")
+        else:
+            console.print("[dim]Δεν είναι διαθέσιμος LLM agent για σύνθεση — δες τις πηγές παραπάνω.[/]")
+    if speak_answer and answer:
+        from .config import DATA_DIR
+        from .voice import VoiceError, speak
+
+        try:
+            out = speak(answer, DATA_DIR / "tts" / "answer.mp3")
+            console.print(f"🔊 Ήχος: [cyan]{out}[/]")
+        except VoiceError as exc:
+            console.print(f"[red]{exc}[/]")
+
+
+@app.command("brief")
+def brief(speak_brief: bool = typer.Option(False, "--speak", help="Εκφώνηση (TTS)")):
+    """Σύντομη ενημέρωση τύπου Jarvis: ώρα, inbox, χθεσινή δραστηριότητα."""
+    from datetime import datetime
+
+    hour = datetime.now().hour
+    # Χρονο-ευαίσθητος χαιρετισμός
+    greeting = "Καλημέρα" if 5 <= hour < 12 else "Καλησπέρα" if hour < 22 else "Καληνύχτα"
+    conn = db.get_conn()
+    new_inbox = len(db.list_inbox(conn, status="new", limit=500))
+    running = conn.execute("SELECT COUNT(*) AS c FROM runs WHERE status='running'").fetchone()["c"]
+    today = datetime.now().date().isoformat()
+    today_runs = conn.execute(
+        "SELECT COUNT(*) AS c FROM runs WHERE created_at LIKE ?", (f"{today}%",)
+    ).fetchone()["c"]
+    errors_today = conn.execute(
+        "SELECT COUNT(*) AS c FROM runs WHERE created_at LIKE ? AND status='error'", (f"{today}%",)
+    ).fetchone()["c"]
+    conn.close()
+
+    lines = [f"{greeting} Ιάκωβε."]
+    if running:
+        lines.append(f"Τρέχουν {running} εκτελέσεις αυτή τη στιγμή.")
+    lines.append(f"Σήμερα έγιναν {today_runs} εκτελέσεις" + (f", οι {errors_today} με σφάλμα." if errors_today else "."))
+    lines.append(
+        f"Έχεις {new_inbox} νέα items στο inbox." if new_inbox
+        else "Το inbox είναι καθαρό — inbox zero. ✨"
+    )
+    text = " ".join(lines)
+    console.print(f"🤖 {text}")
+    if speak_brief:
+        from .config import DATA_DIR
+        from .voice import VoiceError, speak
+
+        try:
+            out = speak(text, DATA_DIR / "tts" / "brief.mp3")
+            console.print(f"🔊 Ήχος: [cyan]{out}[/]")
+        except VoiceError as exc:
+            console.print(f"[red]{exc}[/]")
+
+
+@app.command("say")
+def say(text: str = typer.Argument(..., help="Κείμενο για εκφώνηση"),
+        out: str = typer.Option("data/tts/say.mp3", "--out", help="Αρχείο εξόδου"),
+        voice: str = typer.Option(None, "--voice", help="Φωνή (π.χ. el-GR-AthinaNeural)")):
+    """Ελληνικό TTS μέσω edge-tts (πραγματικό CLI)."""
+    from .voice import DEFAULT_VOICE, VoiceError, speak
+
+    try:
+        path = speak(text, Path(out), voice=voice or DEFAULT_VOICE)
+        console.print(f"🔊 Γράφτηκε: [cyan]{path}[/]")
+    except VoiceError as exc:
+        console.print(f"[red]{exc}[/]")
+        raise typer.Exit(code=1)
+
+
+@app.command("transcribe")
+def transcribe_cmd(audio: str = typer.Argument(..., help="Ηχητικό αρχείο (m4a/wav/mp3)")):
+    """Ελληνικό STT μέσω whisper (τοπικά, πραγματικό CLI)."""
+    from .voice import VoiceError, transcribe
+
+    try:
+        text = transcribe(Path(audio))
+        console.print(text)
+    except VoiceError as exc:
+        console.print(f"[red]{exc}[/]")
+        raise typer.Exit(code=1)
 
 
 @app.command("serve")

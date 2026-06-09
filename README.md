@@ -13,6 +13,8 @@
 - 🧠 **Memory Layer (Obsidian)** — κάθε run γράφει αυτόματα session note στο vault, αναζήτηση accent-insensitive στα Ελληνικά, context injection σε LLM agents πριν από κάθε task, αυτόματο MOC index. Δείξε το `MC_VAULT_DIR` στο πραγματικό σου vault.
 - 📥 **Inbox** — universal capture: αρχεία (watcher στους `MC_WATCH_DIRS`, default Desktop/Downloads), σκέψεις, links. Triage σε Εργασία/Project/Αναφορά/Αρχείο/Έλεγχο — με κανόνες (δωρεάν) ή με AI (`--ai`, πραγματική κλήση LLM μέσω του runner). Ελληνικοί επιχειρησιακοί κανόνες embedded: τα Παρ_/Πλη_/ΤΑΚΚ/ΤΠΥ δεν μετονομάζονται ποτέ, ο φάκελος «ΙΑΚΩΒΟΣ ΠΡΟΣ ΤΡΑΠΕΖΑ» είναι off-limits.
 - 🔌 **Integrations Hub** — connectors σε YAML (`connectors/*.yaml`): GitHub (gh), Google Drive (gws), filesystem. Νέο integration = νέο YAML, χωρίς κώδικα.
+- 📊 **Reflection** — αυτόματο ημερήσιο recap (`Journal/<date>.md`) και εβδομαδιαίο review στο vault, με στατιστικά, blockers και wikilinks στα session notes. Προαιρετικό AI αφήγημα (`--ai`).
+- 🎙️ **«Ask the OS»** — μία ερώτηση στα Ελληνικά ψάχνει ΠΑΝΤΟΥ (notes, runs, inbox) και συνθέτει απάντηση με citations μέσω πραγματικού LLM. Voice: `say` (edge-tts, ελληνικές φωνές), `transcribe` (whisper, τοπικά), `brief --speak` για πρωινή ενημέρωση τύπου Jarvis.
 
 ## Γρήγορη εκκίνηση
 
@@ -41,6 +43,14 @@ uv run mission-control inbox list
 uv run mission-control connectors list
 uv run mission-control connectors run github prs
 uv run mission-control connectors run filesystem recent ~/Projects
+
+# Reflection & Ask the OS
+uv run mission-control reflect daily --ai   # Journal/<σήμερα>.md στο vault
+uv run mission-control reflect weekly
+uv run mission-control ask "Τι έγινε με τα τιμολόγια Arivia;"
+uv run mission-control brief --speak        # πρωινή ενημέρωση + ελληνικό TTS
+uv run mission-control say "Γεια σου Ιάκωβε"
+uv run mission-control transcribe ~/voice-memo.m4a
 
 # API server
 uv run mission-control serve              # http://127.0.0.1:8777 (δες /docs για OpenAPI)
@@ -94,6 +104,4 @@ timeout_s: 1800
 
 ## Roadmap (επόμενα phases)
 
-- 📊 Reflection — ημερήσιο/εβδομαδιαίο recap στο Obsidian
-- 🎙️ «Ask the OS» — ελληνικό voice & query layer (Whisper STT, Edge TTS)
 - 🧬 Self-evolving standards + budget alerts
