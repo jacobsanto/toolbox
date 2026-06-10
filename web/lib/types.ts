@@ -6,6 +6,8 @@ export interface Agent {
   description: string | null;
   command_template: string;
   binary: string;
+  model: string | null;
+  models: string[];
   capabilities: string[];
   budget_scope: "arivia" | "titan" | "personal";
   cost_config: { currency?: string; est_per_run?: number };
@@ -87,6 +89,23 @@ export interface MemoryResult {
 export interface StandardsInfo {
   fixed: string[];
   learned: string[];
+}
+
+export interface Artifact {
+  id: number;
+  run_id: string;
+  kind: string;
+  path: string | null;
+  meta: Record<string, unknown>;
+  created_at: string;
+  agent_id: string;
+  task: string;
+  run_status: string;
+}
+
+export interface RoomResponse {
+  runs: Run[];
+  skipped: { agent_id: string; reason: string }[];
 }
 
 export interface MCEvent {

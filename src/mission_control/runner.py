@@ -23,14 +23,23 @@ LOG_FLUSH_SECS = 1.0
 LOG_FLUSH_LINES = 50
 
 
-def build_argv(command_template: str, task: str) -> list[str]:
+def build_argv(command_template: str, task: str, model: str = "") -> list[str]:
     """Χτίζει argv με ασφάλεια: το {task} γίνεται ΕΝΑ argv token (όχι shell).
 
     Έτσι δεν υπάρχει shell injection — εξαίρεση μόνο ο πράκτορας `shell`,
-    που σκόπιμα τρέχει `bash -lc {task}`.
+    που σκόπιμα τρέχει `bash -lc {task}`. Το {model} αντικαθίσταται μέσα
+    στο token (επιτρέπει και μορφές όπως --model={model}).
     """
     argv = shlex.split(command_template)
-    return [task if tok == "{task}" else tok for tok in argv]
+    out: list[str] = []
+    for tok in argv:
+        if tok == "{task}":
+            out.append(task)
+        elif "{model}" in tok:
+            out.append(tok.replace("{model}", model))
+        else:
+            out.append(tok)
+    return out
 
 
 def submit_run(conn, agent_id: str, task: str, force: bool = False) -> str:
@@ -76,9 +85,9 @@ def execute_run(run_id: str, *, echo: bool = True) -> Run:
 
         ensure_dirs()
         log_path = LOG_DIR / f"{run_id}.log"
-        argv = build_argv(agent["command_template"], run["task"])
         # timeout_s και env ζουν μόνο στην YAML κάρτα (όχι στη DB)
         card = _find_card(agent["id"])
+        argv = build_argv(agent["command_template"], run["task"], model=card.model if card else "")
         env = {**os.environ, **(card.env if card else {})}
         timeout_s = float(card.timeout_s) if card else 3600.0
 

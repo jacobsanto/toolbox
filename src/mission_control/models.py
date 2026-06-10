@@ -7,7 +7,7 @@ import re
 import sqlite3
 from enum import StrEnum
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 SLUG_RE = re.compile(r"^[a-z0-9-]+$")
 
@@ -36,6 +36,10 @@ class AgentCard(BaseModel):
     description: str = ""
     binary: str
     command: str
+    # Model swap: το command μπορεί να έχει token {model} — αλλάζει με ένα
+    # κλικ από το UI χωρίς edit στο YAML. Το `models` τροφοδοτεί το dropdown.
+    model: str = ""
+    models: list[str] = Field(default_factory=list)
     capabilities: list[str] = Field(default_factory=list)
     budget_scope: str = "personal"
     cost: CostConfig = Field(default_factory=CostConfig)
@@ -67,6 +71,12 @@ class AgentCard(BaseModel):
             raise ValueError("Το command πρέπει να περιέχει το token {task}")
         return v
 
+    @model_validator(mode="after")
+    def _model_token_needs_model(self) -> "AgentCard":
+        if "{model}" in self.command and not self.model:
+            raise ValueError("Το command περιέχει {model} αλλά δεν ορίστηκε model στην κάρτα")
+        return self
+
 
 class RunCreate(BaseModel):
     agent_id: str
@@ -97,6 +107,8 @@ class Agent(BaseModel):
     description: str | None = None
     command_template: str
     binary: str
+    model: str | None = None
+    models: list[str] = Field(default_factory=list)
     capabilities: list[str]
     budget_scope: str
     cost_config: dict
@@ -107,6 +119,7 @@ class Agent(BaseModel):
     def from_row(cls, row: sqlite3.Row) -> "Agent":
         d = dict(row)
         d["capabilities"] = json.loads(d.get("capabilities") or "[]")
+        d["models"] = json.loads(d.get("models") or "[]")
         d["cost_config"] = json.loads(d.get("cost_config") or "{}")
         d["available"] = bool(d["available"])
         d.pop("source_path", None)

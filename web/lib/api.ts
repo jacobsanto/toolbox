@@ -1,11 +1,13 @@
 import type {
   Agent,
+  Artifact,
   AskSource,
   BudgetUsage,
   Connector,
   InboxItem,
   MemoryResult,
   MemoryStatus,
+  RoomResponse,
   Run,
   RunDetail,
   StandardsInfo,
@@ -82,3 +84,22 @@ export const reflect = (period: "daily" | "weekly", ai: boolean) =>
 
 export const createAgent = (card: Record<string, unknown>) =>
   post<Agent>("/api/agents", card);
+
+export async function updateAgentModel(agentId: string, model: string): Promise<Agent> {
+  const res = await fetch(`${API}/api/agents/${agentId}`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ model }),
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => null);
+    throw new Error(detail?.detail ?? `API ${res.status}`);
+  }
+  return res.json();
+}
+
+export const submitRoom = (task: string, agent_ids: string[]) =>
+  post<RoomResponse>("/api/room", { task, agent_ids });
+
+export const getArtifacts = (kind?: string, limit = 100) =>
+  get<Artifact[]>(`/api/artifacts?limit=${limit}${kind ? `&kind=${kind}` : ""}`);
