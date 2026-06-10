@@ -61,7 +61,23 @@ export const L2 = {
   generate: "Δημιουργία",
   working: "Επεξεργασία…",
   installHint: "Το CLI δεν βρέθηκε στο PATH — εγκατάστησέ το και θα γίνει ✓ αυτόματα.",
+  room: "Σύσκεψη",
+  roomHint: "Ίδιο task σε πολλούς πράκτορες — σύγκρινε τις απαντήσεις δίπλα-δίπλα.",
+  selectAgents: "Διάλεξε πράκτορες (τουλάχιστον 2)",
+  startRoom: "Ξεκίνα σύσκεψη",
+  skippedAgents: "Παραλείφθηκαν λόγω budget",
+  artifacts: "Δημιουργίες",
+  artifactsEmpty: "Δεν υπάρχουν δημιουργίες ακόμα — τρέξε κάτι!",
+  allKinds: "Όλα",
+  model: "Μοντέλο",
 } as const;
+
+export const ARTIFACT_KIND_LABELS: Record<string, string> = {
+  log: "📜 Log",
+  note: "🧠 Σημείωση",
+  file: "📄 Αρχείο",
+  output: "📦 Output",
+};
 
 export const KIND_LABELS: Record<string, string> = {
   task: "Εργασία",

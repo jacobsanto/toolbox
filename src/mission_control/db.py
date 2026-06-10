@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS agents (
   description      TEXT,
   command_template TEXT NOT NULL,
   binary           TEXT NOT NULL,
+  model            TEXT,
+  models           TEXT NOT NULL DEFAULT '[]',
   capabilities     TEXT NOT NULL DEFAULT '[]',
   budget_scope     TEXT NOT NULL CHECK (budget_scope IN ('arivia','titan','personal')),
   cost_config      TEXT NOT NULL DEFAULT '{}',
@@ -93,7 +95,18 @@ def get_conn() -> sqlite3.Connection:
     conn.execute("PRAGMA busy_timeout=5000")
     conn.execute("PRAGMA foreign_keys=ON")
     conn.executescript(SCHEMA)
+    _migrate(conn)
     return conn
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Προσθέτει στήλες σε υπάρχουσες βάσεις — το CREATE IF NOT EXISTS δεν αρκεί."""
+    existing = {r["name"] for r in conn.execute("PRAGMA table_info(agents)")}
+    if "model" not in existing:
+        conn.execute("ALTER TABLE agents ADD COLUMN model TEXT")
+    if "models" not in existing:
+        conn.execute("ALTER TABLE agents ADD COLUMN models TEXT NOT NULL DEFAULT '[]'")
+    conn.commit()
 
 
 # ---------- agents ----------
@@ -101,12 +114,15 @@ def get_conn() -> sqlite3.Connection:
 def upsert_agent(conn: sqlite3.Connection, card: dict, available: bool, source_path: str) -> None:
     conn.execute(
         """INSERT INTO agents (id, display_name, description, command_template, binary,
-                               capabilities, budget_scope, cost_config, available, source_path, updated_at)
+                               model, models, capabilities, budget_scope, cost_config,
+                               available, source_path, updated_at)
            VALUES (:id, :display_name, :description, :command_template, :binary,
-                   :capabilities, :budget_scope, :cost_config, :available, :source_path, :updated_at)
+                   :model, :models, :capabilities, :budget_scope, :cost_config,
+                   :available, :source_path, :updated_at)
            ON CONFLICT(id) DO UPDATE SET
              display_name=excluded.display_name, description=excluded.description,
              command_template=excluded.command_template, binary=excluded.binary,
+             model=excluded.model, models=excluded.models,
              capabilities=excluded.capabilities, budget_scope=excluded.budget_scope,
              cost_config=excluded.cost_config, available=excluded.available,
              source_path=excluded.source_path, updated_at=excluded.updated_at""",
@@ -116,6 +132,8 @@ def upsert_agent(conn: sqlite3.Connection, card: dict, available: bool, source_p
             "description": card.get("description"),
             "command_template": card["command"],
             "binary": card["binary"],
+            "model": card.get("model") or None,
+            "models": json.dumps(card.get("models", []), ensure_ascii=False),
             "capabilities": json.dumps(card.get("capabilities", []), ensure_ascii=False),
             "budget_scope": card["budget_scope"],
             "cost_config": json.dumps(card.get("cost", {}), ensure_ascii=False),
@@ -214,3 +232,15 @@ def insert_artifact(conn: sqlite3.Connection, run_id: str, kind: str, path: str 
         (run_id, kind, path, json.dumps(meta or {}, ensure_ascii=False), now_iso()),
     )
     conn.commit()
+
+
+def list_artifacts(conn: sqlite3.Connection, kind: str | None = None, limit: int = 100) -> list[sqlite3.Row]:
+    """Artifacts μαζί με στοιχεία του run τους — για το gallery."""
+    base = """SELECT a.id, a.run_id, a.kind, a.path, a.meta, a.created_at,
+                     r.agent_id, r.task, r.status AS run_status
+              FROM artifacts a JOIN runs r ON r.id = a.run_id"""
+    if kind:
+        return conn.execute(
+            f"{base} WHERE a.kind = ? ORDER BY a.created_at DESC LIMIT ?", (kind, limit)
+        ).fetchall()
+    return conn.execute(f"{base} ORDER BY a.created_at DESC LIMIT ?", (limit,)).fetchall()

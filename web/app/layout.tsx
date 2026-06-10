@@ -11,6 +11,8 @@ export const metadata: Metadata = {
 const NAV = [
   { href: "/", label: L.agents },
   { href: "/runs", label: L.runs },
+  { href: "/room", label: `🗣️ ${L2.room}` },
+  { href: "/artifacts", label: `🗂️ ${L2.artifacts}` },
   { href: "/inbox", label: `📥 ${L2.inbox}` },
   { href: "/memory", label: `🧠 ${L2.memory}` },
   { href: "/ask", label: `🎙️ ${L2.ask}` },

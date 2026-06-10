@@ -90,6 +90,38 @@ def create_agent(body: dict) -> Agent:
     return Agent.from_row(row)
 
 
+@app.patch("/api/agents/{agent_id}")
+def update_agent_model(agent_id: str, body: dict) -> Agent:
+    """Model swap με ένα κλικ: ενημερώνει το model στην YAML κάρτα (πηγή αλήθειας)."""
+    import yaml as _yaml
+
+    from ..registry import load_cards
+
+    model = (body.get("model") or "").strip()
+    if not model:
+        raise HTTPException(status_code=422, detail="Δεν δόθηκε model")
+    card = next((c for c in load_cards() if c.name == agent_id), None)
+    if card is None:
+        raise HTTPException(status_code=404, detail=f"Άγνωστος πράκτορας: '{agent_id}'")
+    if "{model}" not in card.command:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Η κάρτα '{agent_id}' δεν δέχεται model — λείπει το token {{model}} από το command",
+        )
+    card.model = model
+    if model not in card.models:
+        card.models.append(model)
+    data = card.model_dump(exclude={"source_path"})
+    Path(card.source_path).write_text(
+        _yaml.safe_dump(data, allow_unicode=True, sort_keys=False), encoding="utf-8"
+    )
+    conn = db.get_conn()
+    sync_registry(conn)
+    row = db.get_agent(conn, agent_id)
+    conn.close()
+    return Agent.from_row(row)
+
+
 @app.get("/api/runs")
 def get_runs(limit: int = 50) -> list[Run]:
     conn = db.get_conn()
@@ -113,6 +145,18 @@ def get_run(run_id: str) -> dict:
     return {**run.model_dump(), "log_tail": log_tail}
 
 
+def _task_with_context(cards, agent_id: str, task: str) -> str:
+    """Ίδιος κανόνας με το CLI: context injection μόνο όπου το δηλώνει η κάρτα."""
+    card = next((c for c in cards if c.name == agent_id), None)
+    if card and card.inject_context:
+        from ..standards import llm_preamble
+
+        ctx = llm_preamble(task)
+        if ctx:
+            return f"{ctx}\n\n---\n\n{task}"
+    return task
+
+
 @app.post("/api/runs", status_code=201)
 def create_run(body: RunCreate) -> Run:
     conn = db.get_conn()
@@ -120,15 +164,7 @@ def create_run(body: RunCreate) -> Run:
     if db.get_agent(conn, body.agent_id) is None:
         conn.close()
         raise HTTPException(status_code=404, detail=f"Άγνωστος πράκτορας: '{body.agent_id}'")
-    task = body.task
-    # Ίδιος κανόνας με το CLI: context injection μόνο όπου το δηλώνει η κάρτα
-    card = next((c for c in cards if c.name == body.agent_id), None)
-    if card and card.inject_context:
-        from ..standards import llm_preamble
-
-        ctx = llm_preamble(task)
-        if ctx:
-            task = f"{ctx}\n\n---\n\n{task}"
+    task = _task_with_context(cards, body.agent_id, body.task)
     from ..budgets import BudgetExceeded
 
     try:
@@ -141,6 +177,57 @@ def create_run(body: RunCreate) -> Run:
     # Εκτέλεση σε daemon thread — ο runner είναι blocking by design
     threading.Thread(target=execute_run, args=(run_id,), kwargs={"echo": False}, daemon=True).start()
     return Run.from_row(row)
+
+
+@app.post("/api/room", status_code=201)
+def create_room(body: dict) -> dict:
+    """Agent Room: ίδιο task σε πολλούς πράκτορες ταυτόχρονα — σύγκριση δίπλα-δίπλα.
+
+    Αν κάποιος πράκτορας κοπεί από budget, παραλείπεται (skipped) χωρίς να
+    μπλοκάρει τους υπόλοιπους.
+    """
+    from ..budgets import BudgetExceeded
+
+    task = (body.get("task") or "").strip()
+    agent_ids = body.get("agent_ids") or []
+    if not task:
+        raise HTTPException(status_code=422, detail="Το task είναι κενό")
+    if len(agent_ids) < 2:
+        raise HTTPException(status_code=422, detail="Διάλεξε τουλάχιστον 2 πράκτορες")
+    conn = db.get_conn()
+    cards = sync_registry(conn)
+    unknown = [a for a in agent_ids if db.get_agent(conn, a) is None]
+    if unknown:
+        conn.close()
+        raise HTTPException(status_code=404, detail=f"Άγνωστοι πράκτορες: {', '.join(unknown)}")
+    runs: list[Run] = []
+    skipped: list[dict] = []
+    for agent_id in agent_ids:
+        try:
+            run_id = submit_run(conn, agent_id, _task_with_context(cards, agent_id, task))
+        except BudgetExceeded as exc:
+            skipped.append({"agent_id": agent_id, "reason": str(exc)})
+            continue
+        runs.append(Run.from_row(db.get_run(conn, run_id)))
+    conn.close()
+    if not runs:
+        raise HTTPException(status_code=429, detail="Όλοι οι πράκτορες κόπηκαν από budget")
+    for run in runs:
+        threading.Thread(target=execute_run, args=(run.id,), kwargs={"echo": False}, daemon=True).start()
+    return {"runs": [r.model_dump() for r in runs], "skipped": skipped}
+
+
+@app.get("/api/artifacts")
+def get_artifacts(kind: str | None = None, limit: int = 100) -> list[dict]:
+    conn = db.get_conn()
+    rows = db.list_artifacts(conn, kind=kind, limit=limit)
+    conn.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["meta"] = json.loads(d.get("meta") or "{}")
+        out.append(d)
+    return out
 
 
 @app.get("/api/inbox")

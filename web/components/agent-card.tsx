@@ -1,5 +1,6 @@
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
+import { ModelSelect } from "./model-select";
 import { L, SCOPE_LABELS } from "@/lib/labels";
 import type { Agent } from "@/lib/types";
 
@@ -26,6 +27,9 @@ export function AgentCard({ agent }: { agent: Agent }) {
           </Badge>
         ))}
       </div>
+      {agent.model && agent.models.length > 0 && (
+        <ModelSelect agentId={agent.id} model={agent.model} models={agent.models} />
+      )}
       <div className="mt-auto flex items-center justify-between pt-2 text-xs text-zinc-500">
         <code className="text-zinc-500">{agent.command_template}</code>
         {agent.available ? (
