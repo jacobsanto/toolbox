@@ -1,4 +1,4 @@
-# Duplicates, Exceptions & Currency
+# Duplicates & Exceptions
 
 ## The 4 rules that solve "same file in two folders"
 
@@ -59,22 +59,6 @@ already there (ignore the docType prefix — a "receipt" and an "invoice" versio
 same transaction). Keep the stronger proof of payment (a receipt beats an unpaid invoice) if
 such a pair exists, otherwise keep the older `createdTime`. Duplicate → `99_DELETIONS/
 {YYYY-MM}/PERSONAL/`.
-
-## Foreign currency
-
-The foreign amount stays in the filename. The exchange rate is priced as of the **issue
-date**, so it's calculated and recorded in the monthly summary. Priority order:
-
-1. **Rate stated on the document itself** — wins, it's what the issuer actually used.
-2. **Central-bank rate for the issue date** — e.g.
-   `https://api.frankfurter.dev/v1/{YYYY-MM-DD}?base={currency}&symbols=EUR` for EUR-based
-   deployments. On a weekend/holiday this correctly returns the previous business day's
-   rate (central banks don't publish on non-business days).
-
-Record both the rate **and** its date — they can differ from the document's date. Worked
-examples: a $31.00 invoice dated 2026-03-27 converted at the same-day rate; a $520.00
-invoice dated 2024-01-01 (a holiday) correctly used the prior business day's rate
-(2023-12-29).
 
 ## Known edge cases (codified from real mistakes)
 

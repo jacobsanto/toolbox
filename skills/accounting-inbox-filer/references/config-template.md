@@ -3,7 +3,7 @@
 This is the **only** place entity names, ΑΦΜ, and Drive/Sheet IDs should ever live. The
 skill itself must never hardcode any of this — every deployment (a solo proprietor, a
 six-entity group, a new client next month) gets its own copy of this config, filled in once
-during setup, and the agents in `agents.md` read from it via the `{{...}}` placeholders.
+during setup, and the agent prompts in `prompts/` read from it via the `{{...}}` placeholders.
 
 Store the filled-in version wherever makes sense for the deployment — a `SETTINGS` sheet
 inside `_CONTROL/` (mirroring the sheet-based settings model in `data-model.md`) is the

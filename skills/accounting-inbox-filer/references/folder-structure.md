@@ -1,5 +1,13 @@
 # Folder Structure & Naming Rules
 
+## Contents
+- Two entry doors
+- The full tree
+- Locked naming conventions (entity folder, months, files)
+- The three folders every entity gets
+- Root-level exception folders
+- The quality gate (promoting sandbox → live folder)
+
 ## Two entry doors
 
 | Door | Accepts | Who has access |

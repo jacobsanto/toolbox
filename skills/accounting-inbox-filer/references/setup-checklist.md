@@ -4,6 +4,17 @@ Walk through these in order with the user before processing a single real file. 
 ahead to "just start filing" without this is how you get a system that looks like it works
 until the 50th file lands in the wrong entity's folder.
 
+Copy this and tick it off — the order matters:
+
+```
+- [ ] 1. Entity list gathered (incl. look-alike ΑΦΜ and known external entities)
+- [ ] 2. Drive skeleton created as a sandbox; write access tested on the Shared Drive
+- [ ] 3. Five control sheets created, vendors sheet seeded
+- [ ] 4. Config filled in and read back to the user
+- [ ] 5. Dry-run on 5–10 known documents, every decision checked by hand
+- [ ] 6. Quality gate passed (only if promoting to a live folder)
+```
+
 ## 1. Gather the entity list
 
 Ask for every ΑΦΜ that should be recognized, with its display name and entity type. This is
