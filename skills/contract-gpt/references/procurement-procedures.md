@@ -1,6 +1,19 @@
 # Procurement Procedures Reference
 # ContractGPT Reference — N.4412/2016 procedures, ΕΣΗΔΗΣ, thresholds, timelines
 
+## Contents
+
+- N.4412/2016 — Framework Overview
+- Procurement Thresholds
+- Open Procedure (Article 27) — Step by Step
+- ΕΣΗΔΗΣ Platform Guide
+- Light Regime (Articles 107-110 + Annex XIV)
+- Qualification Document Checklist
+- Challenge and Appeal Process (ΑΕΠΠ)
+- CPV Code Reference — Common Categories
+- B2G Relationship Development Framework
+- Route Selection — Strategic Profile
+
 ---
 
 ## N.4412/2016 — Framework Overview
@@ -323,3 +336,92 @@ Entry: professional medical/healthcare associations, sector publications.
 
 The relationship must exist on its own merits — not as a procurement tactic.
 Contracting authority officials recognise when interest is purely transactional.
+
+---
+
+## Route Selection — Strategic Profile
+
+The procurement route determines everything: timeline, competition, risk, and
+the relationship dynamic with the contracting authority.
+
+**Route 1: Απευθείας Ανάθεση (Direct Award) — Article 118**
+```
+Threshold: Up to €30,000 excl. VAT (goods/services)
+           Up to €60,000 excl. VAT (works)
+[VERIFY current thresholds — subject to periodic revision]
+
+Process:
+- Single or limited quotation process
+- No public notice required
+- Contracting authority approaches known suppliers
+- Decision by authorised official — no committee required
+- Timeline: 1-4 weeks
+
+Strategic implications:
+- Relationship with contracting authority is decisive
+- First mover advantage is significant
+- Specification is often written with known supplier in mind
+- Entry requires demonstrating capability before need arises
+
+Risk level: Low — if relationship is established
+            High — if cold approach to unknown authority
+```
+
+**Route 2: Light Regime — Articles 107-110 + Annex XIV**
+```
+Threshold: Typically €30,000–€221,000 excl. VAT (services)
+[VERIFY current thresholds]
+
+Applies to: Social services, health services, educational services,
+            legal services, certain IT consultancy services
+CPV codes listed in Annex XIV of N.4412/2016
+
+Process:
+- Public notice required (simplified)
+- Minimum time limits shorter than standard open procedure
+- Evaluation criteria: quality/price ratio
+- Legal Note (Νομικό Σημείωμα) may be required confirming eligibility
+
+Strategic implications:
+- More flexible than full open procedure
+- Relationship still matters significantly
+- Technical offer quality is primary differentiator
+- Single decision-maker (if authorised) or small committee
+
+Risk level: Medium — requires compliance confirmation
+```
+
+**Route 3: Ανοικτός Διαγωνισμός (Open Procedure) — Article 27**
+```
+Threshold: Above EU thresholds
+[VERIFY current EU thresholds — revised every 2 years]
+
+Process:
+- Full public notice on ΕΣΗΔΗΣ and ΚΗΜΔΗΣ
+- Minimum submission period: 35 days (standard)
+                              15 days (urgent — justified)
+- Evaluation committee: minimum 3 members
+- Award criteria must be stated in advance
+- Challenge and appeal rights (ΑΕΠΠ)
+
+Strategic implications:
+- Prior relationship is less decisive but still valuable
+- Technical offer quality and price competitiveness both critical
+- Full transparency — all offers evaluated and ranked publicly
+- Timeline: 3-6 months from publication to contract award
+
+Risk level: High investment of time/resources upfront
+            Legal exposure if procedure is challenged
+```
+
+**Route 4: Framework Agreement**
+```
+Used by central purchasing bodies (e.g., ΓΓΠΣ, ΚΗΜΔΗΣ catalogues)
+Multiple suppliers pre-qualified
+Individual call-offs under agreed terms
+
+Strategic implications:
+- Get on the framework first — then individual contracts flow
+- Less competition per call-off
+- Relationship with framework manager matters
+```

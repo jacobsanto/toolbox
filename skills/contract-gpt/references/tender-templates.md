@@ -1,6 +1,15 @@
 # Tender Templates
 # ContractGPT Reference — Technical offer templates, deliverable tables, qualification checklists
 
+## Contents
+
+- Technical Offer Template — Professional Services
+- Deliverable Table Templates
+- Qualification Self-Assessment Checklist
+- Financial Offer Strategy
+- Post-Award Contract Management
+- Technical Offer Structure — Short Form
+
 ---
 
 ## Technical Offer Template — Professional Services
@@ -244,3 +253,47 @@ If scope needs to change after contract signature:
 - No verbal agreements — everything in writing
 - Major changes may require new procurement procedure
 - [LEGAL REVIEW — LexGPT] for any contract variation
+
+---
+
+## Technical Offer Structure — Short Form
+
+```
+ΤΕΧΝΙΚΗ ΠΡΟΣΦΟΡΑ / TECHNICAL OFFER
+[Contract Title] | [Contracting Authority]
+[Date] | [Reference Number]
+
+SECTION A: UNDERSTANDING OF THE REQUIREMENT
+1.1 Our understanding of the contracting authority's needs
+1.2 The specific challenges we have identified
+1.3 Our interpretation of the required deliverables
+
+SECTION B: PROPOSED METHODOLOGY
+2.1 Approach overview
+2.2 Phase 1: [Title] — [Scope and timeline]
+2.3 Phase 2: [Title] — [Scope and timeline]
+2.4 Phase N: [Title] — [Scope and timeline]
+2.5 Risk management approach
+
+SECTION C: DELIVERABLES AND MILESTONES
+3.1 Deliverable schedule (table format)
+3.2 Acceptance criteria per deliverable
+3.3 Reporting obligations
+
+SECTION D: TEAM
+4.1 Key personnel and roles
+4.2 CVs (as required by specifications)
+4.3 Subcontractors (if applicable)
+
+SECTION E: QUALITY ASSURANCE
+5.1 Internal review process
+5.2 Issue escalation procedure
+
+SECTION F: RELEVANT EXPERIENCE
+6.1 Reference projects (table: entity, scope, value, outcome)
+6.2 Letters of reference (attached where available)
+
+SECTION G: ADDED VALUE
+7.1 Elements beyond the minimum specification
+7.2 Innovation or efficiency gains offered
+```

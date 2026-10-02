@@ -1,6 +1,16 @@
 # EU & International Procurement
 # ContractGPT Reference — EU procurement, ΕΣΠΑ, Horizon, TED, international
 
+## Contents
+
+- EU Procurement Framework
+- EU Direct Grants and Tenders
+- ΕΣΠΑ (European Structural and Investment Funds)
+- Horizon Europe
+- World Bank and Multilateral Development Banks
+- International Procurement — Strategy Summary
+- ΚΗΜΔΗΣ — Public Contracts Intelligence
+
 ---
 
 ## EU Procurement Framework
