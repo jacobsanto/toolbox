@@ -3,7 +3,7 @@
 name: google-drive
 display_name: "Google Drive"
 description: "Αρχεία και αναζήτηση στο Drive μέσω gws CLI"
-binary: gws
+binary: gws  # ή πλήρες path, π.χ. ~/.npm-global/bin/gws — ή όρισε MC_BIN_GWS
 auth: oauth
 actions:
   list_files: "gws drive files list"
