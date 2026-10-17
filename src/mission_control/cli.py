@@ -312,7 +312,7 @@ def connectors_list():
     table.add_column("Actions", max_width=40)
     for c in load_connectors():
         table.add_row(
-            c.name, c.binary, c.auth,
+            c.name, c.resolved_binary or c.binary, c.auth,
             "[green]✓[/]" if c.available else "[red]✗[/]",
             ", ".join(c.actions),
         )

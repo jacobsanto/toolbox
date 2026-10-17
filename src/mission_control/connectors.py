@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import os
 import shlex
 import shutil
 import subprocess
@@ -31,8 +32,61 @@ class Connector(BaseModel):
     source_path: str = ""
 
     @property
+    def binary_name(self) -> str:
+        """Το σκέτο όνομα του CLI (π.χ. 'gws'), ακόμη κι αν το binary είναι πλήρες path."""
+        return Path(self.binary).name
+
+    @property
+    def resolved_binary(self) -> str | None:
+        """Πού βρίσκεται πραγματικά το CLI. Σειρά αναζήτησης:
+
+        1. Μεταβλητή περιβάλλοντος MC_BIN_<NAME> (π.χ. MC_BIN_GWS=/opt/gws/bin/gws)
+        2. Το πεδίο `binary` του YAML (δέχεται και πλήρες path, και ~)
+        3. Το PATH, συν συνηθισμένους φακέλους που συχνά λείπουν από το PATH
+           όταν το Mission Control ξεκινά από GUI/launchd/systemd.
+        """
+        env_key = "MC_BIN_" + self.binary_name.upper().replace("-", "_")
+        candidates = [os.environ.get(env_key, ""), self.binary]
+        for cand in candidates:
+            if not cand:
+                continue
+            path = Path(cand).expanduser()
+            if path.is_absolute() or os.sep in cand:
+                if path.is_file() and os.access(path, os.X_OK):
+                    return str(path)
+                continue
+            found = shutil.which(cand)
+            if found:
+                return found
+            found = shutil.which(cand, path=os.pathsep.join(_extra_bin_dirs()))
+            if found:
+                return found
+        return None
+
+    @property
     def available(self) -> bool:
-        return shutil.which(self.binary) is not None
+        return self.resolved_binary is not None
+
+
+def _extra_bin_dirs() -> list[str]:
+    """Φάκελοι όπου εγκαθίστανται συνήθως CLIs (npm -g, pipx, Homebrew) αλλά
+    δεν είναι πάντα στο PATH της διεργασίας."""
+    home = Path.home()
+    dirs = [
+        home / ".local" / "bin",
+        home / ".npm-global" / "bin",
+        home / ".volta" / "bin",
+        home / "bin",
+        Path("/opt/homebrew/bin"),
+        Path("/usr/local/bin"),
+    ]
+    prefix = os.environ.get("NPM_CONFIG_PREFIX")
+    if prefix:
+        dirs.insert(0, Path(prefix).expanduser() / "bin")
+    appdata = os.environ.get("APPDATA")  # Windows: npm -g -> %APPDATA%\npm
+    if appdata:
+        dirs.insert(0, Path(appdata) / "npm")
+    return [str(d) for d in dirs if d.is_dir()]
 
 
 def load_connectors(connectors_dir: Path = CONNECTORS_DIR) -> list[Connector]:
@@ -77,9 +131,18 @@ def run_action(connector: Connector, action: str, args: list[str]) -> int:
         available = ", ".join(connector.actions) or "—"
         print(f"Άγνωστο action '{action}'. Διαθέσιμα: {available}", file=sys.stderr)
         return 2
-    if not connector.available:
-        print(f"Το CLI '{connector.binary}' δεν είναι εγκατεστημένο σε αυτό το σύστημα", file=sys.stderr)
+    binary = connector.resolved_binary
+    if binary is None:
+        env_key = "MC_BIN_" + connector.binary_name.upper().replace("-", "_")
+        print(
+            f"Δεν βρέθηκε το CLI '{connector.binary}'. Εγκατέστησέ το, ή δώσε το πλήρες path "
+            f"στο `binary:` του {Path(connector.source_path).name} ή στη μεταβλητή {env_key}.",
+            file=sys.stderr,
+        )
         return 127
     argv = build_action_argv(connector.actions[action], args)
+    # Το template ξεκινά με το σκέτο όνομα (π.χ. 'gws')· τρέχουμε το path που βρήκαμε.
+    if argv and Path(argv[0]).name == connector.binary_name:
+        argv[0] = binary
     proc = subprocess.run(argv)
     return proc.returncode
